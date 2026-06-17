@@ -1,0 +1,19 @@
+# Godot-specific ignores
+.godot/
+/android/
+
+# Mono/C# specific ignores
+.mono/
+bin/
+obj/
+
+# Visual Studio / IDE ignores
+.vs/
+.vscode/
+.idea/
+*.user
+*.userossc
+*.sln.docstates
+*.suo
+*.suo.tmp
+*.userprefs

@@ -1,0 +1,42 @@
+[gd_scene load_steps=4 format=3 uid="uid://cxvfxarq0yeco"]
+
+[ext_resource type="Script" uid="uid://dfccx5yai8a02" path="res://Scripts/Player.cs" id="1_rpqav"]
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_kyqiw"]
+height = 1.98
+radius = 0.4
+
+[sub_resource type="BoxMesh" id="BoxMesh_rpqav"]
+size = Vector3(0.8, 1.98, 0.8)
+
+[node name="Player" type="CharacterBody3D"]
+script = ExtResource("1_rpqav")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("CylinderShape3D_kyqiw")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_rpqav")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.7, 0)
+
+[node name="RayCast3D" type="RayCast3D" parent="Camera3D"]
+target_position = Vector3(0, 0, -5)
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="HUD" type="Control" parent="UI"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="SelectedBlockLabel" type="Label" parent="UI/HUD"]
+layout_mode = 0
+offset_left = 550.0
+offset_top = 25.0
+offset_right = 590.0
+offset_bottom = 48.0
