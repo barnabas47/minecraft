@@ -59,3 +59,8 @@ A voxel-based 3D sandbox game built from scratch in Godot Engine 4 using C# and 
 - **Inventory megnyitása**: `E`
 - **Interakció (Crafting / Furnace)**: Egér jobb klikk az adott blokkon
 - **Tárgy kiválasztása**: Egér görgő vagy a `1-9` számbillentyűk
+
+---
+
+## 📸 Képek (Images)
+<img width="1148" height="644" alt="image" src="https://github.com/user-attachments/assets/deb656d5-3e80-4dd3-a6e8-021d7a8125c5" />
