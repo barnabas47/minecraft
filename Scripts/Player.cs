@@ -85,6 +85,8 @@ public partial class Player : CharacterBody3D
 	{
 		Input.MouseMode = Input.MouseModeEnum.Captured;
 
+		AddToGroup("Player");
+
 		_camera = GetNode<Camera3D>("Camera3D");
 		_rayCast = GetNode<RayCast3D>("Camera3D/RayCast3D");
 		
@@ -110,6 +112,18 @@ public partial class Player : CharacterBody3D
 			if (keyEvent.Keycode == Key.E || keyEvent.Keycode == Key.I)
 			{
 				ToggleInventory();
+				GetViewport().SetInputAsHandled();
+				return;
+			}
+			if (keyEvent.Keycode == Key.P)
+			{
+				SpawnMobDebug("res://Scenes/Pig.tscn");
+				GetViewport().SetInputAsHandled();
+				return;
+			}
+			if (keyEvent.Keycode == Key.Z)
+			{
+				SpawnMobDebug("res://Scenes/Zombie.tscn");
 				GetViewport().SetInputAsHandled();
 				return;
 			}
@@ -2159,7 +2173,7 @@ public partial class Player : CharacterBody3D
 		}
 	}
 
-	private void TakeDamage(float amount)
+	public void TakeDamage(float amount)
 	{
 		_health = Mathf.Max(_health - amount, 0f);
 		UpdateStatusBars();
@@ -2167,6 +2181,31 @@ public partial class Player : CharacterBody3D
 		if (_health <= 0f)
 		{
 			Die();
+		}
+	}
+
+	private void SpawnMobDebug(string scenePath)
+	{
+		try
+		{
+			if (!ResourceLoader.Exists(scenePath))
+			{
+				GD.PrintErr($"Debug spawn failed: Scene file not found at '{scenePath}'. Make sure you have created it in the Godot Editor.");
+				return;
+			}
+			var scene = GD.Load<PackedScene>(scenePath);
+			if (scene != null)
+			{
+				var mob = scene.Instantiate<CharacterBody3D>();
+				Vector3 spawnPos = GlobalPosition - Transform.Basis.Z * 3.0f + Vector3.Up * 1.0f;
+				mob.GlobalPosition = spawnPos;
+				_world.AddChild(mob);
+				GD.Print($"Spawned mob from {scenePath} at {spawnPos}");
+			}
+		}
+		catch (Exception e)
+		{
+			GD.PrintErr($"Failed to spawn mob {scenePath}: {e.Message}");
 		}
 	}
 
