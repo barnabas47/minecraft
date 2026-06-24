@@ -129,4 +129,54 @@ public abstract partial class Mob : CharacterBody3D
 			leg.Rotation = new Vector3(angle, leg.Rotation.Y, leg.Rotation.Z);
 		}
 	}
+
+	protected void SetupDefaultMesh(string nodeName, Vector3 jointPos, Vector3 boxSize, Vector3 meshOffset, Color color)
+	{
+		var node = ModelNode?.GetNodeOrNull<Node3D>(nodeName);
+		if (node == null) return;
+
+		node.Position = jointPos;
+
+		if (node is MeshInstance3D meshInst)
+		{
+			if (meshInst.Mesh == null && meshInst.GetChildCount() == 0)
+			{
+				var childMesh = new MeshInstance3D();
+				var box = new BoxMesh();
+				box.Size = boxSize;
+				childMesh.Mesh = box;
+				childMesh.Position = meshOffset;
+
+				var mat = new StandardMaterial3D();
+				mat.AlbedoColor = color;
+				mat.Roughness = 0.8f;
+				childMesh.MaterialOverride = mat;
+
+				meshInst.AddChild(childMesh);
+			}
+		}
+	}
+
+	protected void SetupDirectMesh(string nodeName, Vector3 pos, Vector3 boxSize, Color color)
+	{
+		var node = ModelNode?.GetNodeOrNull<Node3D>(nodeName);
+		if (node == null) return;
+
+		node.Position = pos;
+
+		if (node is MeshInstance3D meshInst)
+		{
+			if (meshInst.Mesh == null)
+			{
+				var box = new BoxMesh();
+				box.Size = boxSize;
+				meshInst.Mesh = box;
+
+				var mat = new StandardMaterial3D();
+				mat.AlbedoColor = color;
+				mat.Roughness = 0.8f;
+				meshInst.MaterialOverride = mat;
+			}
+		}
+	}
 }

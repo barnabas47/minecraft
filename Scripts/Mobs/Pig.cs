@@ -11,6 +11,17 @@ public partial class Pig : PassiveMob
 		WanderSpeed = 1.0f;
 		PanicSpeed = 3.0f;
 		base._Ready();
+
+		Color pink = Color.FromHtml("#ffc0cb");
+		Color darkPink = Color.FromHtml("#ffb6c1");
+
+		SetupDirectMesh("Body", new Vector3(0f, 0.6f, 0f), new Vector3(0.9f, 0.6f, 1.2f), pink);
+		SetupDirectMesh("Head", new Vector3(0f, 0.9f, -0.6f), new Vector3(0.5f, 0.5f, 0.5f), pink);
+
+		SetupDefaultMesh("LegLeft", new Vector3(-0.25f, 0.5f, -0.4f), new Vector3(0.2f, 0.5f, 0.2f), new Vector3(0f, -0.25f, 0f), darkPink);
+		SetupDefaultMesh("LegRight", new Vector3(0.25f, 0.5f, -0.4f), new Vector3(0.2f, 0.5f, 0.2f), new Vector3(0f, -0.25f, 0f), darkPink);
+		SetupDefaultMesh("LegLeftBack", new Vector3(-0.25f, 0.5f, 0.4f), new Vector3(0.2f, 0.5f, 0.2f), new Vector3(0f, -0.25f, 0f), darkPink);
+		SetupDefaultMesh("LegRightBack", new Vector3(0.25f, 0.5f, 0.4f), new Vector3(0.2f, 0.5f, 0.2f), new Vector3(0f, -0.25f, 0f), darkPink);
 	}
 
 	protected override void SpawnDrops()

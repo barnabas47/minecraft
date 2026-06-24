@@ -14,6 +14,18 @@ public partial class Zombie : HostileMob
 		AttackCooldown = 1.5f;
 		AttackRange = 1.5f;
 		base._Ready();
+
+		Color green = Color.FromHtml("#4b6f44");
+		Color blue = Color.FromHtml("#00a2e8");
+		Color purple = Color.FromHtml("#3f48cc");
+
+		SetupDirectMesh("Body", new Vector3(0f, 1.2f, 0f), new Vector3(0.6f, 0.8f, 0.3f), blue);
+		SetupDirectMesh("Head", new Vector3(0f, 1.85f, 0f), new Vector3(0.5f, 0.5f, 0.5f), green);
+
+		SetupDefaultMesh("LegLeft", new Vector3(-0.15f, 0.8f, 0f), new Vector3(0.2f, 0.8f, 0.2f), new Vector3(0f, -0.4f, 0f), purple);
+		SetupDefaultMesh("LegRight", new Vector3(0.15f, 0.8f, 0f), new Vector3(0.2f, 0.8f, 0.2f), new Vector3(0f, -0.4f, 0f), purple);
+		SetupDefaultMesh("ArmLeft", new Vector3(-0.4f, 1.5f, 0f), new Vector3(0.2f, 0.2f, 0.8f), new Vector3(0f, 0f, -0.4f), green);
+		SetupDefaultMesh("ArmRight", new Vector3(0.4f, 1.5f, 0f), new Vector3(0.2f, 0.2f, 0.8f), new Vector3(0f, 0f, -0.4f), green);
 	}
 
 	protected override void SpawnDrops()
