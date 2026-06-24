@@ -16,6 +16,8 @@ public partial class World : Node3D
 	public readonly Dictionary<Vector3I, FurnaceState> Furnaces = new();
 	private readonly Queue<Vector2I> _chunkLoadQueue = new();
 	private readonly System.Collections.Concurrent.ConcurrentDictionary<Vector2I, bool> _chunksLoading = new();
+	private readonly System.Collections.Concurrent.ConcurrentQueue<(Chunk Chunk, Chunk.MeshData MeshData, bool TriggerNeighbors)> _meshApplyQueue = new();
+	private int _frameCounter = 0;
 
 	public override void _Ready()
 	{
@@ -46,8 +48,25 @@ public partial class World : Node3D
 			}
 		}
 
-		ProcessChunkLoadQueue();
+		_frameCounter++;
+		if (_frameCounter % 4 == 0)
+		{
+			ProcessChunkLoadQueue();
+		}
+
+		ProcessMeshApplyQueue();
 		TickFurnaces((float)delta);
+	}
+
+	private void ProcessMeshApplyQueue()
+	{
+		if (_meshApplyQueue.TryDequeue(out var item))
+		{
+			if (GodotObject.IsInstanceValid(item.Chunk))
+			{
+				item.Chunk.ApplyMeshData(item.MeshData, item.TriggerNeighbors);
+			}
+		}
 	}
 
 	private void UpdateChunksAroundPlayer(Vector3 playerPos)
@@ -67,13 +86,20 @@ public partial class World : Node3D
 			}
 		}
 
-		// Új pozíciók sorba állítása
+		// Újraépítjük a sort, hogy a legközelebbiek legyenek elöl
+		_chunkLoadQueue.Clear();
+
+		// Közelebbi chunkok prioritása (távolság alapján növekvő sorrend)
+		newChunkPositions.Sort((a, b) => 
+		{
+			float distA = a.DistanceSquaredTo(playerChunk);
+			float distB = b.DistanceSquaredTo(playerChunk);
+			return distA.CompareTo(distB);
+		});
+
 		foreach (var pos in newChunkPositions)
 		{
-			if (!_chunkLoadQueue.Contains(pos))
-			{
-				_chunkLoadQueue.Enqueue(pos);
-			}
+			_chunkLoadQueue.Enqueue(pos);
 		}
 
 		// 5. Túl távoli chunkok kicsatolása és törlése
@@ -144,8 +170,8 @@ public partial class World : Node3D
 					
 					var meshData = chunkNode.BuildMeshData();
 					
-					// A kész mesh-t a fő szálra küldjük vissza kirajzolásra
-					chunkNode.CallDeferred(nameof(Chunk.ApplyMeshData), meshData);
+					// Behelyezzük a kész mesh-t a fő szál ütemező sorába
+					_meshApplyQueue.Enqueue((chunkNode, meshData, true));
 				}
 				catch (Exception ex)
 				{
@@ -381,7 +407,7 @@ public partial class World : Node3D
 					try
 					{
 						var meshData = neighbor.BuildMeshData();
-						neighbor.CallDeferred(nameof(Chunk.ApplyMeshData), meshData, false);
+						_meshApplyQueue.Enqueue((neighbor, meshData, false));
 					}
 					catch (Exception ex)
 					{
