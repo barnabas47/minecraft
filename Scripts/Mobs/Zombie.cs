@@ -26,6 +26,16 @@ public partial class Zombie : HostileMob
 		SetupDefaultMesh("LegRight", new Vector3(0.15f, 0.8f, 0f), new Vector3(0.2f, 0.8f, 0.2f), new Vector3(0f, -0.4f, 0f), purple);
 		SetupDefaultMesh("ArmLeft", new Vector3(-0.4f, 1.5f, 0f), new Vector3(0.2f, 0.2f, 0.8f), new Vector3(0f, 0f, -0.4f), green);
 		SetupDefaultMesh("ArmRight", new Vector3(0.4f, 1.5f, 0f), new Vector3(0.2f, 0.2f, 0.8f), new Vector3(0f, 0f, -0.4f), green);
+
+		// Configure collision shape to prevent floating: make the bottom of the shape y = 0
+		var colShape = GetNodeOrNull<CollisionShape3D>("CollisionShape3D");
+		if (colShape != null)
+		{
+			var box = new BoxShape3D();
+			box.Size = new Vector3(0.6f, 1.8f, 0.6f);
+			colShape.Shape = box;
+			colShape.Position = new Vector3(0f, 0.9f, 0f);
+		}
 	}
 
 	protected override void SpawnDrops()

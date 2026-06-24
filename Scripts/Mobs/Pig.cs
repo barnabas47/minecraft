@@ -22,6 +22,16 @@ public partial class Pig : PassiveMob
 		SetupDefaultMesh("LegRight", new Vector3(0.25f, 0.5f, -0.4f), new Vector3(0.2f, 0.5f, 0.2f), new Vector3(0f, -0.25f, 0f), darkPink);
 		SetupDefaultMesh("LegLeftBack", new Vector3(-0.25f, 0.5f, 0.4f), new Vector3(0.2f, 0.5f, 0.2f), new Vector3(0f, -0.25f, 0f), darkPink);
 		SetupDefaultMesh("LegRightBack", new Vector3(0.25f, 0.5f, 0.4f), new Vector3(0.2f, 0.5f, 0.2f), new Vector3(0f, -0.25f, 0f), darkPink);
+
+		// Configure collision shape to prevent floating: make the bottom of the shape y = 0
+		var colShape = GetNodeOrNull<CollisionShape3D>("CollisionShape3D");
+		if (colShape != null)
+		{
+			var box = new BoxShape3D();
+			box.Size = new Vector3(0.9f, 1.0f, 1.2f);
+			colShape.Shape = box;
+			colShape.Position = new Vector3(0f, 0.5f, 0f);
+		}
 	}
 
 	protected override void SpawnDrops()

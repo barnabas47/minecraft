@@ -20,7 +20,7 @@ public abstract partial class Mob : CharacterBody3D
 		Health = MaxHealth;
 		ModelNode = GetNodeOrNull<Node3D>("Model");
 		CollisionLayer = 4; // Mobs layer
-		CollisionMask = 1 | 4; // Collide with static world (1) and other mobs (4)
+		CollisionMask = 1;  // Collide only with static world (1) to prevent mob-to-mob jittering
 
 		var worldNode = GetParent();
 		while (worldNode != null && worldNode is not World)
@@ -62,7 +62,8 @@ public abstract partial class Mob : CharacterBody3D
 		Vector2 horizontalVel = new Vector2(Velocity.X, Velocity.Z);
 		if (horizontalVel.LengthSquared() > 0.001f)
 		{
-			float targetAngle = Mathf.Atan2(Velocity.X, Velocity.Z);
+			// Add Pi to align model's forward (-Z) with movement direction
+			float targetAngle = Mathf.Atan2(Velocity.X, Velocity.Z) + Mathf.Pi;
 			Rotation = new Vector3(Rotation.X, targetAngle, Rotation.Z);
 			AnimateLegs(delta, horizontalVel.Length());
 		}
