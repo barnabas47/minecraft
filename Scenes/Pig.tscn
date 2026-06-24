@@ -1,0 +1,25 @@
+[gd_scene load_steps=3 format=3 uid="uid://cwh5stt6qtlv8"]
+
+[ext_resource type="Script" uid="uid://c7lftt7u444v" path="res://Scripts/Mobs/Pig.cs" id="1_6jth5"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_6jth5"]
+
+[node name="Pig" type="CharacterBody3D"]
+script = ExtResource("1_6jth5")
+
+[node name="Model" type="Node3D" parent="."]
+
+[node name="Body" type="MeshInstance3D" parent="Model"]
+
+[node name="Head" type="MeshInstance3D" parent="Model"]
+
+[node name="LegLeft" type="MeshInstance3D" parent="Model"]
+
+[node name="LegRight" type="MeshInstance3D" parent="Model"]
+
+[node name="LegLeftBack" type="MeshInstance3D" parent="Model"]
+
+[node name="LegRightBack" type="MeshInstance3D" parent="Model"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("BoxShape3D_6jth5")

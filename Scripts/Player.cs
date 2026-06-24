@@ -18,6 +18,7 @@ public partial class Player : CharacterBody3D
 	private int _selectedHotbarIndex = 0;
 	private BlockType SelectedBlock => _hotbarBlocks[_selectedHotbarIndex].IsEmpty ? BlockType.Air : _hotbarBlocks[_selectedHotbarIndex].Type;
 	private bool _physicsWokenUp = false;
+	private bool _spawnPositionSet = false;
 
 	// Status bars state
 	private float _health = 20f;
@@ -180,6 +181,28 @@ public partial class Player : CharacterBody3D
 		{
 			this.MotionMode = MotionModeEnum.Grounded;
 			_physicsWokenUp = true;
+		}
+
+		if (!_spawnPositionSet)
+		{
+			float topY = GetTopBlockYGlobal(Position.X, Position.Z);
+			if (topY > 1.0f && topY < Chunk.ChunkSizeY)
+			{
+				Position = new Vector3(Position.X, topY + 1.5f, Position.Z);
+				_spawnPositionSet = true;
+				_highestYInAir = Position.Y;
+				_wasInAir = false;
+				Velocity = Vector3.Zero;
+				GD.Print($"Player snapped to top block at Y = {topY}");
+			}
+			else
+			{
+				// Keep player floating safely high until chunk loads
+				Position = new Vector3(Position.X, 50.0f, Position.Z);
+				Velocity = Vector3.Zero;
+				MoveAndSlide();
+				return;
+			}
 		}
 
 		Vector3 velocity = Velocity;
@@ -2198,8 +2221,8 @@ public partial class Player : CharacterBody3D
 			{
 				var mob = scene.Instantiate<CharacterBody3D>();
 				Vector3 spawnPos = GlobalPosition - Transform.Basis.Z * 3.0f + Vector3.Up * 1.0f;
-				mob.GlobalPosition = spawnPos;
 				_world.AddChild(mob);
+				mob.GlobalPosition = spawnPos;
 				GD.Print($"Spawned mob from {scenePath} at {spawnPos}");
 			}
 		}
@@ -2209,6 +2232,21 @@ public partial class Player : CharacterBody3D
 		}
 	}
 
+	private float GetTopBlockYGlobal(float x, float z)
+	{
+		int blockX = Mathf.FloorToInt(x);
+		int blockZ = Mathf.FloorToInt(z);
+		for (int y = Chunk.ChunkSizeY - 1; y >= 0; y--)
+		{
+			BlockType block = _world.GetBlockAtGlobal(new Vector3I(blockX, y, blockZ));
+			if (block != BlockType.Air)
+			{
+				return y + 1; // Position just above the block
+			}
+		}
+		return 0.0f; // Default fallback if no block generated yet
+	}
+
 	private void Die()
 	{
 		_health = MaxHealth;
@@ -2216,6 +2254,7 @@ public partial class Player : CharacterBody3D
 		
 		Position = new Vector3(0, 50, 0); // Safe high position above ground
 		Velocity = Vector3.Zero;
+		_spawnPositionSet = false;
 		
 		GD.Print("A játékos meghalt és újjászületett!");
 		UpdateStatusBars();
