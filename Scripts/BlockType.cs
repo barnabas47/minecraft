@@ -71,7 +71,7 @@ public static class BlockDatabase
 	private static readonly int[] GoldOreSides     = { 13, 13, 13, 13, 13, 13 };
 	private static readonly int[] DiamondOreSides  = { 14, 14, 14, 14, 14, 14 };
 	private static readonly int[] CobblestoneSides = { 15, 15, 15, 15, 15, 15 };
-	private static readonly int[] CraftingTableSides = { 16, 16, 16, 16, 17, 9 };
+	private static readonly int[] CraftingTableSides = { 17, 17, 17, 17, 16, 9 };
 	private static readonly int[] FurnaceSides     = { 19, 19, 19, 18, 19, 19 };
 
 	// Atlas paraméterek – Új 256x256-os képhez 8 sor

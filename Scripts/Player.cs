@@ -19,6 +19,28 @@ public partial class Player : CharacterBody3D
 	private BlockType SelectedBlock => _hotbarBlocks[_selectedHotbarIndex].IsEmpty ? BlockType.Air : _hotbarBlocks[_selectedHotbarIndex].Type;
 	private bool _physicsWokenUp = false;
 
+	// Status bars state
+	private float _health = 20f;
+	private const float MaxHealth = 20f;
+	private float _hunger = 20f;
+	private const float MaxHunger = 20f;
+	private float _xpProgress = 0f;
+	private int _xpLevel = 0;
+
+	// Status bars UI
+	private ColorRect _healthBarFill = null!;
+	private ColorRect _hungerBarFill = null!;
+	private ColorRect _xpBarFill = null!;
+
+	// Timer state for hunger and regen
+	private float _hungerTimer = 0f;
+	private float _starvationTimer = 0f;
+	private float _regenTimer = 0f;
+
+	// Fall damage state
+	private float _highestYInAir = float.MinValue;
+	private bool _wasInAir = false;
+
 	// Bányászati segédváltozók
 	private Vector3I? _miningBlockPos = null;
 	private float _miningProgress = 0f;
@@ -77,6 +99,7 @@ public partial class Player : CharacterBody3D
 		_world = (World)worldNode!;
 
 		CreateHotbarUI();
+		CreateStatusBarsUI();
 		CreateInventoryUI();
 	}
 
@@ -188,6 +211,10 @@ public partial class Player : CharacterBody3D
 		Velocity = velocity;
 		MoveAndSlide();
 
+		HandleFallDamage(Position.Y);
+		HandleHungerAndStarvation((float)delta);
+		HandleHealthRegen((float)delta);
+
 		HandleBlockInteraction(delta);
 	}
 
@@ -197,6 +224,16 @@ public partial class Player : CharacterBody3D
 		{
 			ResetMining();
 			return;
+		}
+
+		if (Input.IsActionJustPressed("click_right"))
+		{
+			BlockType heldType = SelectedBlock;
+			if (IsFood(heldType))
+			{
+				EatFood(heldType);
+				return;
+			}
 		}
 
 		if (_rayCast.IsColliding())
@@ -231,7 +268,7 @@ public partial class Player : CharacterBody3D
 					);
 
 					BlockType typeToPlace = SelectedBlock;
-					if (typeToPlace != BlockType.Air && !IsTool(typeToPlace))
+					if (typeToPlace != BlockType.Air && IsPlaceable(typeToPlace))
 					{
 						if (!IsCollidingWithPlayer(blockPos))
 						{
@@ -358,6 +395,20 @@ public partial class Player : CharacterBody3D
 						else if (BlockDatabase.CanDropItem(hitBlock, SelectedBlock))
 						{
 							_world.SpawnBlockItem(itemSpawnPos, hitBlock);
+						}
+
+						// Award XP for mining ores
+						if (hitBlock == BlockType.CoalOre || hitBlock == BlockType.IronOre || hitBlock == BlockType.GoldOre || hitBlock == BlockType.DiamondOre)
+						{
+							float xpReward = hitBlock switch
+							{
+								BlockType.CoalOre => 0.07f,
+								BlockType.IronOre => 0.15f,
+								BlockType.GoldOre => 0.3f,
+								BlockType.DiamondOre => 0.6f,
+								_ => 0f
+							};
+							AddXp(xpReward);
 						}
 						
 						ResetMining();
@@ -2052,6 +2103,257 @@ public partial class Player : CharacterBody3D
 			RefreshInventoryUI();
 		}
 		return success && tempStack.IsEmpty;
+	}
+
+	public static bool IsFood(BlockType type)
+	{
+		return type == BlockType.Apple || type == BlockType.RawPorkchop || type == BlockType.CookedPorkchop;
+	}
+
+	public static bool IsPlaceable(BlockType type)
+	{
+		return type == BlockType.Grass ||
+			   type == BlockType.Dirt ||
+			   type == BlockType.Stone ||
+			   type == BlockType.Wood ||
+			   type == BlockType.Leaves ||
+			   type == BlockType.Brick ||
+			   type == BlockType.Planks ||
+			   type == BlockType.Glass ||
+			   type == BlockType.CoalOre ||
+			   type == BlockType.IronOre ||
+			   type == BlockType.GoldOre ||
+			   type == BlockType.DiamondOre ||
+			   type == BlockType.Cobblestone ||
+			   type == BlockType.CraftingTable ||
+			   type == BlockType.Furnace;
+	}
+
+	private void EatFood(BlockType foodType)
+	{
+		int hungerRestore = foodType switch
+		{
+			BlockType.RawPorkchop => 3,
+			BlockType.CookedPorkchop => 8,
+			BlockType.Apple => 4,
+			_ => 0
+		};
+
+		if (hungerRestore > 0)
+		{
+			_hunger = Mathf.Min(_hunger + hungerRestore, MaxHunger);
+			PlayPickupSound();
+
+			var stack = _hotbarBlocks[_selectedHotbarIndex];
+			stack.Count -= 1;
+			if (stack.Count <= 0)
+			{
+				_hotbarBlocks[_selectedHotbarIndex] = ItemStack.Empty;
+			}
+			else
+			{
+				_hotbarBlocks[_selectedHotbarIndex] = stack;
+			}
+			UpdateHotbarIcons();
+			UpdateStatusBars();
+		}
+	}
+
+	private void TakeDamage(float amount)
+	{
+		_health = Mathf.Max(_health - amount, 0f);
+		UpdateStatusBars();
+		
+		if (_health <= 0f)
+		{
+			Die();
+		}
+	}
+
+	private void Die()
+	{
+		_health = MaxHealth;
+		_hunger = MaxHunger;
+		
+		Position = new Vector3(0, 50, 0); // Safe high position above ground
+		Velocity = Vector3.Zero;
+		
+		GD.Print("A játékos meghalt és újjászületett!");
+		UpdateStatusBars();
+	}
+
+	public void AddXp(float amount)
+	{
+		_xpProgress += amount;
+		while (_xpProgress >= 1f)
+		{
+			_xpProgress -= 1f;
+			_xpLevel++;
+		}
+		UpdateStatusBars();
+	}
+
+	private void CreateStatusBarsUI()
+	{
+		var hudNode = GetNode<Control>("UI/HUD");
+
+		if (hudNode.HasNode("XpBarBg")) hudNode.GetNode("XpBarBg").QueueFree();
+		if (hudNode.HasNode("HealthBarBg")) hudNode.GetNode("HealthBarBg").QueueFree();
+		if (hudNode.HasNode("HungerBarBg")) hudNode.GetNode("HungerBarBg").QueueFree();
+
+		// 1. XP Bar (kék)
+		var xpBarBg = new ColorRect();
+		xpBarBg.Name = "XpBarBg";
+		xpBarBg.Color = new Color(0.05f, 0.05f, 0.05f, 0.6f);
+		xpBarBg.AnchorLeft = 0.5f;
+		xpBarBg.AnchorRight = 0.5f;
+		xpBarBg.AnchorTop = 1.0f;
+		xpBarBg.AnchorBottom = 1.0f;
+		xpBarBg.OffsetLeft = -286;
+		xpBarBg.OffsetRight = 286;
+		xpBarBg.OffsetTop = -88;
+		xpBarBg.OffsetBottom = -82;
+		hudNode.AddChild(xpBarBg);
+
+		_xpBarFill = new ColorRect();
+		_xpBarFill.Name = "XpBarFill";
+		_xpBarFill.Color = new Color(0.1f, 0.6f, 0.9f, 0.9f); // Cyan/blue
+		xpBarBg.AddChild(_xpBarFill);
+
+		// 2. Health Bar (piros)
+		var healthBarBg = new ColorRect();
+		healthBarBg.Name = "HealthBarBg";
+		healthBarBg.Color = new Color(0.05f, 0.05f, 0.05f, 0.6f);
+		healthBarBg.AnchorLeft = 0.5f;
+		healthBarBg.AnchorRight = 0.5f;
+		healthBarBg.AnchorTop = 1.0f;
+		healthBarBg.AnchorBottom = 1.0f;
+		healthBarBg.OffsetLeft = -286;
+		healthBarBg.OffsetRight = 286;
+		healthBarBg.OffsetTop = -102;
+		healthBarBg.OffsetBottom = -94;
+		hudNode.AddChild(healthBarBg);
+
+		_healthBarFill = new ColorRect();
+		_healthBarFill.Name = "HealthBarFill";
+		_healthBarFill.Color = new Color(0.9f, 0.15f, 0.15f, 0.9f); // Red
+		healthBarBg.AddChild(_healthBarFill);
+
+		// 3. Hunger Bar (barna)
+		var hungerBarBg = new ColorRect();
+		hungerBarBg.Name = "HungerBarBg";
+		hungerBarBg.Color = new Color(0.05f, 0.05f, 0.05f, 0.6f);
+		hungerBarBg.AnchorLeft = 0.5f;
+		hungerBarBg.AnchorRight = 0.5f;
+		hungerBarBg.AnchorTop = 1.0f;
+		hungerBarBg.AnchorBottom = 1.0f;
+		hungerBarBg.OffsetLeft = -286;
+		hungerBarBg.OffsetRight = 286;
+		hungerBarBg.OffsetTop = -116;
+		hungerBarBg.OffsetBottom = -108;
+		hudNode.AddChild(hungerBarBg);
+
+		_hungerBarFill = new ColorRect();
+		_hungerBarFill.Name = "HungerBarFill";
+		_hungerBarFill.Color = new Color(0.6f, 0.4f, 0.25f, 0.9f); // Brown
+		hungerBarBg.AddChild(_hungerBarFill);
+
+		UpdateStatusBars();
+	}
+
+	private void UpdateStatusBars()
+	{
+		if (_healthBarFill == null || _hungerBarFill == null || _xpBarFill == null) return;
+
+		const float FullWidth = 572f;
+
+		// Health
+		float healthPct = Mathf.Clamp(_health / MaxHealth, 0f, 1f);
+		_healthBarFill.Size = new Vector2(FullWidth * healthPct, 8f);
+
+		// Hunger
+		float hungerPct = Mathf.Clamp(_hunger / MaxHunger, 0f, 1f);
+		_hungerBarFill.Size = new Vector2(FullWidth * hungerPct, 8f);
+
+		// XP
+		float xpPct = Mathf.Clamp(_xpProgress, 0f, 1f);
+		_xpBarFill.Size = new Vector2(FullWidth * xpPct, 6f);
+	}
+
+	private void HandleFallDamage(float yPosition)
+	{
+		if (!IsOnFloor())
+		{
+			if (!_wasInAir)
+			{
+				_wasInAir = true;
+				_highestYInAir = yPosition;
+			}
+			else if (yPosition > _highestYInAir)
+			{
+				_highestYInAir = yPosition;
+			}
+		}
+		else
+		{
+			if (_wasInAir)
+			{
+				float fallDistance = _highestYInAir - yPosition;
+				if (fallDistance >= 4.0f)
+				{
+					float damage = fallDistance - 3.0f;
+					TakeDamage(damage);
+				}
+				_wasInAir = false;
+				_highestYInAir = float.MinValue;
+			}
+		}
+	}
+
+	private void HandleHungerAndStarvation(float delta)
+	{
+		_hungerTimer += delta;
+		if (_hungerTimer >= 8f) // Every 8 seconds
+		{
+			_hungerTimer = 0f;
+			if (_hunger > 0f)
+			{
+				_hunger = Mathf.Max(_hunger - 0.5f, 0f);
+				UpdateStatusBars();
+			}
+		}
+
+		if (_hunger <= 0f)
+		{
+			_starvationTimer += delta;
+			if (_starvationTimer >= 4f) // Every 4 seconds
+			{
+				_starvationTimer = 0f;
+				TakeDamage(1.0f);
+			}
+		}
+		else
+		{
+			_starvationTimer = 0f;
+		}
+	}
+
+	private void HandleHealthRegen(float delta)
+	{
+		if (_hunger >= 18f && _health < MaxHealth)
+		{
+			_regenTimer += delta;
+			if (_regenTimer >= 4f) // Regenerate 1 health every 4 seconds
+			{
+				_regenTimer = 0f;
+				_health = Mathf.Min(_health + 1.0f, MaxHealth);
+				UpdateStatusBars();
+			}
+		}
+		else
+		{
+			_regenTimer = 0f;
+		}
 	}
 
 	private class InventorySlot
